@@ -117,19 +117,19 @@ class User {
   static async messagesFrom(username) {
     const mResults = await db.query(
       `
-      SELECT m.id, m.to_username, u.username, u.first_name, u.last_name, u.phone,
+      SELECT m.id, m.to_username, u.first_name, u.last_name, u.phone,
               m.body, m.sent_at, m.read_at
       FROM   messages as m
-      JOIN   users as u
-      ON     m.to_username = u.username
+      JOIN   users AS u ON m.to_username = u.username
       WHERE  from_username = $1;`,
       [username]
     );
 
     const messages = mResults.rows;
+    console.log('messages', messages);
     const userMessages = messages.map((m) => {
-      const { username, first_name, last_name, phone, ...remainingData } = m;
-      remainingData.toUser = { username, first_name, last_name, phone };
+      const { to_username, first_name, last_name, phone, ...remainingData } = m;
+      remainingData.to_user = { to_username, first_name, last_name, phone };
       return remainingData;
     });
 
@@ -147,10 +147,10 @@ class User {
   static async messagesTo(username) {
     const mResults = await db.query(
       `
-      SELECT m.id, m.to_username, u.username, u.first_name, u.last_name, u.phone,
+      SELECT m.id, m.from_username, u.first_name, u.last_name, u.phone,
               m.body, m.sent_at, m.read_at
-      FROM   messages as m
-      JOIN   users as u
+      FROM   messages AS m
+      JOIN   users AS u
       ON     m.from_username = u.username
       WHERE  to_username = $1;`,
       [username]
@@ -158,8 +158,8 @@ class User {
 
     const messages = mResults.rows;
     const userMessages = messages.map((m) => {
-      const { username, first_name, last_name, phone, ...remainingData } = m;
-      remainingData.from_user = { username, first_name, last_name, phone };
+      const { from_username, first_name, last_name, phone, ...remainingData } = m;
+      remainingData.from_user = { from_username, first_name, last_name, phone };
       return remainingData;
     });
 
