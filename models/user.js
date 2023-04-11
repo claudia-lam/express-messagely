@@ -20,7 +20,15 @@ class User {
     ($1, $2, $3, $4, $5, $6, $7)
     RETURNING username, password, first_name, last_name, phone
     `,
-      [username, hashedPassword, first_name, last_name, phone, new Date(), new Date()]
+      [
+        username,
+        hashedPassword,
+        first_name,
+        last_name,
+        phone,
+        new Date(),
+        new Date(),
+      ]
     );
     const user = results.rows[0];
     return user;
@@ -120,14 +128,9 @@ class User {
 
     const messages = mResults.rows;
     const userMessages = messages.map((m) => {
-      const { username, first_name, last_name, phone } = m;
-      return {
-        id: m.id,
-        to_user: { username, first_name, last_name, phone},
-        body: m.body,
-        sent_at: m.sent_at,
-        read_at: m.read_at,
-      };
+      const { username, first_name, last_name, phone, ...remainingData } = m;
+      remainingData.toUser = { username, first_name, last_name, phone };
+      return remainingData;
     });
 
     return userMessages;
@@ -155,14 +158,9 @@ class User {
 
     const messages = mResults.rows;
     const userMessages = messages.map((m) => {
-      const { username, first_name, last_name, phone } = m;
-      return {
-        id: m.id,
-        from_user: { username, first_name, last_name, phone },
-        body: m.body,
-        sent_at: m.sent_at,
-        read_at: m.read_at,
-      };
+      const { username, first_name, last_name, phone, ...remainingData } = m;
+      remainingData.from_user = { username, first_name, last_name, phone };
+      return remainingData;
     });
 
     return userMessages;
