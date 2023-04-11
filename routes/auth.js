@@ -10,8 +10,10 @@ const jwt = require("jsonwebtoken");
 /** POST /login: {username, password} => {token} */
 router.post("/login", async function (req, res, next) {
   if (req.body === undefined) throw new BadRequestError();
+
   const { username, password } = req.body;
   const validUser = await User.authenticate(username, password);
+
   if (validUser) {
     const token = jwt.sign({ username }, SECRET_KEY);
     return res.json({ token });
@@ -25,8 +27,13 @@ router.post("/login", async function (req, res, next) {
  */
 router.post("/register", async function (req, res, next) {
   if (req.body === undefined) throw new BadRequestError();
-  const user = await User.register(req.body);
+
+  const {username, password} = req.body;
+
+  await User.register(req.body);
+
   const validUser = await User.authenticate(username, password);
+
   if (validUser) {
     const token = jwt.sign({ username }, SECRET_KEY);
     return res.json({ token });
