@@ -5,6 +5,7 @@ const router = new Router();
 const User = require("../models/user");
 const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
 
+//TODO: update docstrings with auth requirements
 /** GET / - get list of users.
  *
  * => {users: [{username, first_name, last_name}, ...]}
@@ -41,7 +42,6 @@ router.get("/:username", ensureCorrectUser, async function (req, res) {
 router.get("/:username/to", ensureCorrectUser, async function (req, res) {
   const username = req.params.username;
   const messages = await User.messagesTo(username);
-  console.log("messages", messages);
   return res.json({ messages });
 });
 
@@ -57,7 +57,6 @@ router.get("/:username/to", ensureCorrectUser, async function (req, res) {
 router.get("/:username/from", ensureCorrectUser, async function (req, res) {
   const username = req.params.username;
   const messages = await User.messagesFrom(username);
-  console.log("messages", messages);
   return res.json({ messages });
 });
 
