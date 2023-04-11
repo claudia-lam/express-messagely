@@ -22,16 +22,14 @@ class User {
                       join_at,
                       last_login_at)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7)
+        ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
     RETURNING username, password, first_name, last_name, phone`,
       [
         username,
         hashedPassword,
         first_name,
         last_name,
-        phone,
-        new Date(),
-        new Date(),
+        phone
       ]
     );
     const user = results.rows[0];
@@ -49,27 +47,25 @@ class User {
     );
 
     const user = results.rows[0];
-    User.updateLoginTimestamp(username);
 
-    return await bcrypt.compare(password, user?.password) === true
+    if (!user) return false;
+
+    return await bcrypt.compare(password, user.password) === true;
   }
 
   /** Update last_login_at for user */
-
   static async updateLoginTimestamp(username) {
-    const timestamp = new Date();
     const results = await db.query(
       `UPDATE users
-          SET last_login_at=$1
-          WHERE username=$2
+          SET last_login_at=current_timestamp
+          WHERE username=$1
           RETURNING username`,
-      [timestamp, username]
+      [username]
     );
 
     const user = results.rows[0];
-
     if (!user) {
-      throw new NotFoundError();
+      throw new NotFoundError(`No user found for ${username}`);
     }
   }
 
@@ -84,7 +80,6 @@ class User {
     );
 
     const users = results.rows;
-    if (!users[0]) throw new NotFoundError("No users found!");
     return users;
   }
   /** Get: get user by username
@@ -137,7 +132,7 @@ class User {
     const messagesData = mResults.rows;
     const messagesDataFormatted = messagesData.map((m) => {
       const { to_username, first_name, last_name, phone, ...remainingData } = m;
-      remainingData.to_user = { to_username, first_name, last_name, phone };
+      remainingData.to_user = { "username": to_username, first_name, last_name, phone };
       return remainingData;
     });
 
@@ -164,21 +159,15 @@ class User {
               m.read_at
         FROM  messages AS m
               JOIN users AS u ON m.from_username = u.username
-        HERE  to_username = $1;`,
+        WHERE  to_username = $1;`,
       [username]
     );
 
     const messagesData = mResults.rows;
     const messagesDataFormatted = messagesData.map((m) => {
-    const {
-          from_username,
-          first_name,
-          last_name,
-          phone,
-          ...remainingData
-    } = m;
+      const { from_username, first_name, last_name, phone, ...remainingData} = m;
 
-      remainingData.from_user = { from_username, first_name, last_name, phone };
+      remainingData.from_user = { "username": from_username, first_name, last_name, phone };
       return remainingData;
     });
 
