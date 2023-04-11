@@ -2,6 +2,7 @@
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 const { NotFoundError } = require("../expressError");
+const db = require("../db");
 
 /** User of the site. */
 
@@ -14,12 +15,12 @@ class User {
     const results = await db.query(
       `
     INSERT INTO users (username, password, first_name, last_name, phone,
-      join_at)
+      join_at, last_login_at)
     VALUES
-    ($1, $2, $3, $4, $5, $6)
+    ($1, $2, $3, $4, $5, $6, $7)
     RETURNING username, password, first_name, last_name, phone
     `,
-      [username, hashedPassword, first_name, last_name, phone, new Date()]
+      [username, hashedPassword, first_name, last_name, phone, new Date(), new Date()]
     );
     const user = results.rows[0];
     return user;
@@ -36,6 +37,7 @@ class User {
     );
 
     const user = results.rows[0];
+    User.updateLoginTimestamp(username);
     //TODO: possible refactor to throw error?
     return (await bcrypt.compare(password, user?.password)) === true;
   }
@@ -45,16 +47,16 @@ class User {
   static async updateLoginTimestamp(username) {
     const timestamp = new Date();
     const results = await db.query(
-      `INSERT INTO users (last_login_at)
-        VALUE ($1)
+      `UPDATE users
+        SET last_login_at=$1
         WHERE username=$2
         RETURNING username`,
       [timestamp, username]
     );
 
-    const username = results.rows[0];
+    const user = results.rows[0];
 
-    if (!username) {
+    if (!user) {
       throw new NotFoundError();
     }
   }
@@ -83,7 +85,7 @@ class User {
    *          last_login_at } */
 
   static async get(username) {
-    const result = db.query(
+    const result = await db.query(
       `
       SELECT username, first_name, last_name, phone, join_at, last_login_at
       FROM   users
@@ -105,20 +107,30 @@ class User {
    */
 
   static async messagesFrom(username) {
-    const result = db.query(
+    const mResults = await db.query(
       `
-      SELECT id, to_username, u.username, u.first_name, u.last_name, u.phone,
-              body, sent_at, read_at
+      SELECT m.id, m.to_username, u.username, u.first_name, u.last_name, u.phone,
+              m.body, m.sent_at, m.read_at
       FROM   messages as m
       JOIN   users as u
-      ON     from_username = u.username
-      WHERE  u.username = 'claudiaslam';
-      `,
+      ON     m.to_username = u.username
+      WHERE  from_username = $1;`,
       [username]
     );
 
-    const messages = result.rows;
-    const toUsers = messages.map((message) => message.to_username); //[evanhesketh, testUser]
+    const messages = mResults.rows;
+    const userMessages = messages.map((m) => {
+      const { username, first_name, last_name, phone } = m;
+      return {
+        id: m.id,
+        to_user: { username, first_name, last_name, phone},
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at,
+      };
+    });
+
+    return userMessages;
   }
 
   /** Return messages to this user.
@@ -129,7 +141,32 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesTo(username) {}
+  static async messagesTo(username) {
+    const mResults = await db.query(
+      `
+      SELECT m.id, m.to_username, u.username, u.first_name, u.last_name, u.phone,
+              m.body, m.sent_at, m.read_at
+      FROM   messages as m
+      JOIN   users as u
+      ON     m.from_username = u.username
+      WHERE  to_username = $1;`,
+      [username]
+    );
+
+    const messages = mResults.rows;
+    const userMessages = messages.map((m) => {
+      const { username, first_name, last_name, phone } = m;
+      return {
+        id: m.id,
+        from_user: { username, first_name, last_name, phone },
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at,
+      };
+    });
+
+    return userMessages;
+  }
 }
 
 module.exports = User;

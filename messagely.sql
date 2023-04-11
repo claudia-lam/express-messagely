@@ -34,7 +34,6 @@ VALUES
   ('claudiaslam', 'evanhesketh', 'hi', '2023-04-10 12:20:07-07'),
   ('claudiaslam', 'testUser', 'test message', '2023-04-10 12:20:07-07');
 
-
 \echo 'Delete and recreate messagely_test db?'
 \prompt 'Return for yes or control-C to cancel > ' foo
 
